@@ -1,0 +1,18 @@
+### Login to Get JWT
+POST https://localhost:5001/api/Account/login
+Content-Type: application/json
+
+{
+  "email": "<your_email>",
+  "password": "<your_password>"
+}
+
+### Get public data
+GET https://localhost:5001/api/data/public
+Content-Type: application/json
+
+### Get protected data
+GET https://localhost:5001/api/data/protected
+Authorization: Bearer <your_token>
+Content-Type: application/json
+
