@@ -25,7 +25,7 @@ dotnet build
 4. Run the project
 
 ```bash
-dotnet run --project JwtAuthApi
+dotnet run --project JAuth.Api --launch-profile https
 ```
 
 5. Open your browser and navigate to `https://localhost:5001/swagger/index.html` to view the Swagger documentation.
