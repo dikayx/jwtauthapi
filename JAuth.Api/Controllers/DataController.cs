@@ -27,6 +27,11 @@ namespace JAuth.Api.Controllers
         [HttpGet("protected")]
         public IActionResult GetProtectedData()
         {
+            if (!User.Identity?.IsAuthenticated ?? false)
+            {
+                return Unauthorized();
+            }
+
             _logger.LogInformation($"/protected endpoint accessed @ {DateTime.Now}");
             return Ok("This is a protected endpoint. You are authenticated!");
         }

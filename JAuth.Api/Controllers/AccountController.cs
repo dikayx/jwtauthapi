@@ -129,6 +129,7 @@ namespace JAuth.Api.Controllers
             return Ok(CreateLoginResult(true, "User deleted"));
         }
 
+        // TODO: Move this to a service class?
 
         /// <summary>
         /// Asynchronously generates a JWT token for the given user.
