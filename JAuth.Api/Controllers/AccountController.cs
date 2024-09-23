@@ -1,13 +1,11 @@
 ﻿using JAuth.Api.Data;
+using JAuth.Api.Factories;
 using JAuth.Api.Repositories;
+using JAuth.Api.Security;
 using JAuth.UserEntityModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace JAuth.Api.Controllers
 {
@@ -19,12 +17,14 @@ namespace JAuth.Api.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IUserRepository _repository;
         private readonly IConfiguration _configuration;
+        private readonly TokenService _tokenService;
 
         public AccountController(UserManager<ApplicationUser> userManager, IUserRepository repository, IConfiguration configuration)
         {
             _userManager = userManager;
             _repository = repository;
             _configuration = configuration;
+            _tokenService = new TokenService(_configuration);
         }
 
         // POST: api/Account/Register
@@ -36,17 +36,17 @@ namespace JAuth.Api.Controllers
             var existingUser = await _repository.GetUserByEmailAsync(registerRequest.Email);
             if (existingUser != null)
             {
-                return BadRequest(CreateLoginResult(false, "User already exists"));
+                return BadRequest(LoginResultFactory.Create(false, "User already exists"));
             }
 
             var newUser = await _repository.CreateUserAsync(registerRequest);
             if (newUser == null)
             {
-                return BadRequest(CreateLoginResult(false, "Failed to create user"));
+                return BadRequest(LoginResultFactory.Create(false, "Failed to create user"));
             }
 
-            var jwt = await GenerateJwt(newUser);
-            return Ok(CreateLoginResult(true, "User created", jwt));
+            var jwt = await _tokenService.GenerateJwtAsync(newUser);
+            return Ok(LoginResultFactory.Create(true, "User created", jwt));
         }
 
         // POST: api/Account/Login
@@ -58,11 +58,11 @@ namespace JAuth.Api.Controllers
             var user = await _userManager.FindByEmailAsync(loginRequest.Email);
             if (user == null || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
             {
-                return BadRequest(CreateLoginResult(false, "Invalid username or password"));
+                return BadRequest(LoginResultFactory.Create(false, "Invalid username or password"));
             }
 
-            var jwt = await GenerateJwt(user);
-            return Ok(CreateLoginResult(true, "Login successful", jwt));
+            var jwt = await _tokenService.GenerateJwtAsync(user);
+            return Ok(LoginResultFactory.Create(true, "Login successful", jwt));
         }
 
         // PUT: api/Account/Update
@@ -76,17 +76,17 @@ namespace JAuth.Api.Controllers
             var user = await _userManager.FindByEmailAsync(updateRequest.Email);
             if (user == null)
             {
-                return BadRequest(CreateLoginResult(false, "User not found"));
+                return BadRequest(LoginResultFactory.Create(false, "User not found"));
             }
 
             var result = await _repository.UpdateUserAsync(updateRequest, user);
             if (result == null)
             {
-                return BadRequest(CreateLoginResult(false, "Failed to update user"));
+                return BadRequest(LoginResultFactory.Create(false, "Failed to update user"));
             }
 
-            var jwt = await GenerateJwt(result);
-            return Ok(CreateLoginResult(true, "User updated", jwt));
+            var jwt = await _tokenService.GenerateJwtAsync(result);
+            return Ok(LoginResultFactory.Create(true, "User updated", jwt));
         }
 
         // GET: api/Account/Get/{email}
@@ -100,7 +100,7 @@ namespace JAuth.Api.Controllers
             var user = await _repository.GetUserByEmailAsync(email);
             if (user == null)
             {
-                return BadRequest(CreateLoginResult(false, "User not found"));
+                return BadRequest(LoginResultFactory.Create(false, "User not found"));
             }
 
             return Ok(user);
@@ -117,57 +117,16 @@ namespace JAuth.Api.Controllers
             var user = await _userManager.FindByEmailAsync(deleteRequest.Email);
             if (user == null)
             {
-                return BadRequest(CreateLoginResult(false, "User not found"));
+                return BadRequest(LoginResultFactory.Create(false, "User not found"));
             }
 
             var result = await _repository.DeleteUserAsync(user);
             if (result == null)
             {
-                return BadRequest(CreateLoginResult(false, "Failed to delete user"));
+                return BadRequest(LoginResultFactory.Create(false, "Failed to delete user"));
             }
 
-            return Ok(CreateLoginResult(true, "User deleted"));
-        }
-
-        // TODO: Move this to a service class?
-
-        /// <summary>
-        /// Asynchronously generates a JWT token for the given user.
-        /// The token includes the user's name as a claim and expires after 1 hour.
-        /// 
-        /// Usage: var jwt = GenerateJwtToken(user).Result;
-        /// </summary>
-        /// <param name="user">The user for whom the token is generated.</param>
-        /// <returns>A JWT token as a string.</returns>
-        private async Task<String?> GenerateJwt(ApplicationUser user)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecretKey"]);
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, user.UserName) }),
-                Expires = DateTime.UtcNow.AddHours(1),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            var tokenString = tokenHandler.WriteToken(token);
-
-            // TODO: Implement async operation for this method...?
-
-            return tokenString;
-        }
-
-        /// Small helper method to create a LoginResult object.
-        private LoginResult CreateLoginResult(bool success, string message, string? token = null)
-        {
-            return new LoginResult()
-            {
-                Success = success,
-                Message = message,
-                Token = token
-            };
+            return Ok(LoginResultFactory.Create(true, "User deleted"));
         }
     }
 }
