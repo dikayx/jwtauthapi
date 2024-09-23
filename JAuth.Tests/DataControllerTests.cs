@@ -69,6 +69,5 @@ namespace JAuth.Tests
             var unauthorizedResult = Assert.IsType<UnauthorizedResult>(result);
             Assert.Equal(401, unauthorizedResult.StatusCode);
         }
-
     }
 }
