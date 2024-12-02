@@ -1,6 +1,6 @@
 # Installation Guide
 
-This demo project is available for Window, Linux, and MacOS. However, the installation process is different for each operating system and there may be some limitations. This guide will help you install the app on your operating system.
+This demo project is available for Windows, Linux, and MacOS. This guide will help you install the app on your operating system.
 
 ## Requirements
 
